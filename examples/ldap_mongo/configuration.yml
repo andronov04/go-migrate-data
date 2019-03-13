@@ -1,0 +1,65 @@
+version: '0.1'
+
+logging:
+  driver: pass
+
+source:
+  driver: pass
+  opts:
+    base_dn: 'dc=getmobit,dc=ru'
+  stages: ['test1', 'test2']
+
+  filter: '(&(objectClass=person)(!(objectClass=computer)))'
+  attributes: 'cn,sn,objectClass,sAMAccountName,objectGUID,userPrincipalName'
+  mapping: 'uid=sAMAccountName,userPassword=userPrincipalName'
+  defaults: 'VDI_SOURCE=gfx'
+
+
+target:
+  driver: pass
+
+  stages:
+    - users:
+      opts: null
+      args:
+        - server
+        - /storage
+      env:
+        - name: TEST_ACCESS_KEY
+          value: 'test'
+    - devices:
+      opts: null
+
+structures:
+  - users:
+    sourceName: 'users' # just name
+    targetName: 'employee' # just name
+    sourceUniqueID: 'objectGUID'
+    targetUniqueID: 'objectGUID'
+
+    sourceArgs: # args for source driver
+      url: 'ldap://localhost:389'
+      username: 'login'
+      password: 'password'
+      opts:
+        bind_dn: 'dc=getmobit,dc=ru'
+        filter: '(&(objectClass=person)(!(objectClass=computer)))'
+
+    targetArgs: # args for target driver
+      url: 'mongodb://localhost:21017'
+      username: 'login'
+      password: 'password'
+      opts:
+        database: 'getmobit' # name database
+        collection: 'employee'
+
+    mapping:
+      uid: 'sAMAccountName'
+      userPassword: 'SASL{SAMACCOUNTNAME}'
+
+    default:
+      description: [
+        'VDI_SOURCE=gfx',
+        'VDI_USER=getmobit\{UID}',
+        'EXTRA_5=/sec:tls'
+      ]
